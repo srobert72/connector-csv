@@ -315,7 +315,7 @@ public class CsvConfiguration extends AbstractConfiguration {
         LOG.info("Csv configuration validation finished");
     }
 
-    public ObjectClassHandlerConfiguration getConfig() {
+    public ObjectClassHandlerConfiguration getConfig() throws IOException {
         if (config != null) {
             config.recompute();
         }
@@ -352,15 +352,14 @@ public class CsvConfiguration extends AbstractConfiguration {
             values.put(subKey, value);
         });
 
-        ocMap.keySet().forEach(key -> {
-
+        for (String key : ocMap.keySet()) {
             Map<String, Object> values = ocMap.get(key);
 
             ObjectClassHandlerConfiguration config = new ObjectClassHandlerConfiguration(new ObjectClass(key), values);
             config.recompute();
 
             configs.add(config);
-        });
+        }
 
         return configs;
     }

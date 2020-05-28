@@ -8,7 +8,10 @@ import org.identityconnectors.framework.common.exceptions.ConfigurationException
 import org.identityconnectors.framework.common.objects.ObjectClass;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.charset.Charset;
+import java.nio.file.Files;
 import java.util.Map;
 
 /**
@@ -94,9 +97,10 @@ public class ObjectClassHandlerConfiguration {
         setAuxiliary(Util.getSafeValue(values, "auxiliary", false, Boolean.class));
     }
 
-    public void recompute() {
-        if (tmpFolder == null && filePath != null) {
-            this.tmpFolder = filePath.getParentFile();
+    public void recompute() throws IOException {
+        if (tmpFolder == null) {
+            tmpFolder = Files.createTempDirectory("connector-csv-").toFile();
+            tmpFolder.deleteOnExit();
         }
 
         if (StringUtil.isEmpty(nameAttribute)) {
