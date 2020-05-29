@@ -22,6 +22,9 @@ public class CsvTestUtil {
 
     private static final Log LOG = Log.getLog(CsvTestUtil.class);
 
+    public static final String tmpFolderPath = System.getProperty("java.io.tmpdir")
+            + File.separator + "connectorcsv-tmp" + File.separator;
+
     public static Map<String, String> findRecord(CsvConfiguration config, String value) throws IOException {
         return findRecord(config, BaseTest.ATTR_UID, value);
     }
@@ -52,7 +55,7 @@ public class CsvTestUtil {
     }
 
     public static void deleteAllSyncFiles() throws IOException {
-        File target = new File("./target");
+        File target = new File(tmpFolderPath);
 
         File[] list = target.listFiles(new FilenameFilter() {
 

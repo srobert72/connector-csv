@@ -33,10 +33,10 @@ public class SyncOpTest extends BaseTest {
         config.setTrim(true);
         ConnectorFacade connector = setupConnector("/sync.csv", config);
 
-        File oldSyncFile = new File("./target/data.csv.sync.1300734815289");
+        File oldSyncFile = new File(CsvTestUtil.tmpFolderPath + "data.csv.sync.1300734815289");
         FileUtils.copyFile(new File(TEMPLATE_FOLDER_PATH, "sync.csv.1300734815289"), oldSyncFile);
 
-        File lock = new File("./target/data.csv." + Util.SYNC_LOCK_EXTENSION);
+        File lock = new File(CsvTestUtil.tmpFolderPath + "data.csv." + Util.SYNC_LOCK_EXTENSION);
         lock.createNewFile();
 
         try {
@@ -55,7 +55,7 @@ public class SyncOpTest extends BaseTest {
     public void badHeaders() throws Exception {
         ConnectorFacade connector = setupConnector("/sync-bad.csv", createConfiguration());
 
-        File oldSyncFile = new File("./target/data.csv.sync.1300734815289");
+        File oldSyncFile = new File(CsvTestUtil.tmpFolderPath + "data.csv.sync.1300734815289");
         FileUtils.copyFile(new File(TEMPLATE_FOLDER_PATH, "sync-bad.csv.1300734815289"), oldSyncFile);
 
         try {
@@ -78,7 +78,7 @@ public class SyncOpTest extends BaseTest {
         config.setTrim(true);
         ConnectorFacade connector = setupConnector("/sync.csv", config);
 
-        File oldSyncFile = new File("./target/data.csv.sync.1300734815289");
+        File oldSyncFile = new File(CsvTestUtil.tmpFolderPath + "data.csv.sync.1300734815289");
         FileUtils.copyFile(new File(TEMPLATE_FOLDER_PATH, "sync.csv.1300734815289"), oldSyncFile);
 
         try {
@@ -288,6 +288,8 @@ public class SyncOpTest extends BaseTest {
 
             doSync(connector, token2);
         }
+
+        CsvTestUtil.deleteAllSyncFiles();
     }
 
     private SyncToken doSync(ConnectorFacade connector, SyncToken token) throws Exception {
