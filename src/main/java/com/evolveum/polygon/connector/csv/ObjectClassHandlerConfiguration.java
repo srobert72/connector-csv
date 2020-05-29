@@ -9,9 +9,9 @@ import org.identityconnectors.framework.common.objects.ObjectClass;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.UncheckedIOException;
+import java.net.URI;
 import java.nio.charset.Charset;
-import java.nio.file.Files;
+import java.nio.file.*;
 import java.util.Map;
 
 /**
@@ -24,6 +24,9 @@ public class ObjectClassHandlerConfiguration {
     private ObjectClass objectClass;
 
     private File filePath;
+
+    private URI dataUri;
+    private Path dataPath;
 
     private String encoding;
 
@@ -68,6 +71,10 @@ public class ObjectClassHandlerConfiguration {
         setFilePath(Util.getSafeValue(values, "filePath", null, File.class));
         setEncoding(Util.getSafeValue(values, "encoding", "utf-8"));
 
+        if (dataUri == null) {
+            setDataUri(Util.getSafeValue(values, "dataUri", null, URI.class));
+        }
+
         setFieldDelimiter(Util.getSafeValue(values, "fieldDelimiter", ";"));
         setEscape(Util.getSafeValue(values, "escape", "\\"));
         setCommentMarker(Util.getSafeValue(values, "commentMarker", "#"));
@@ -99,7 +106,12 @@ public class ObjectClassHandlerConfiguration {
 
     public void recompute() throws IOException {
         if (tmpFolder == null) {
-            tmpFolder = Files.createTempDirectory("connector-csv-").toFile();
+            String tmpdir = System.getProperty("java.io.tmpdir");
+            String tmpFolderPath = tmpdir + File.separator + "connectorcsv-tmp";
+
+            tmpFolder = new File(tmpFolderPath);
+            tmpFolder.mkdir();
+
             tmpFolder.deleteOnExit();
         }
 
@@ -170,6 +182,28 @@ public class ObjectClassHandlerConfiguration {
 
     public void setFilePath(File filePath) {
         this.filePath = filePath;
+
+        if (filePath != null) {
+            setDataUri(filePath.toURI());
+        }
+    }
+
+    public URI getDataUri() {
+        return dataUri;
+    }
+
+    public void setDataUri(URI dataUri) {
+        this.dataUri = dataUri;
+
+        if (dataUri != null) {
+            this.dataPath = Paths.get(dataUri);
+        } else {
+            this.dataPath = null;
+        }
+    }
+
+    public Path getDataPath() {
+        return dataPath;
     }
 
     public String getEncoding() {
@@ -315,7 +349,7 @@ public class ObjectClassHandlerConfiguration {
     public void validate() {
         LOG.ok("Validating configuration for {0}", objectClass);
 
-        validateCsvFile();
+        validateCsvPath();
         validateTmpFolder();
 
         Util.notEmpty(encoding, "Encoding is not defined.");
@@ -353,14 +387,18 @@ public class ObjectClassHandlerConfiguration {
         validateAttributeNames();
     }
 
-    private void validateCsvFile() {
-    	Util.checkCanReadFile(filePath);
+    private void validateCsvPath() {
+        if (dataPath == null) {
+            return;
+        }
 
-    	synchronized (CsvConnector.SYNCH_FILE_LOCK) {
-    		if (!readOnly && !filePath.canWrite()) {
-    			throw new ConfigurationException("Can't write to file '" + filePath.getAbsolutePath() + "'");
-    		}
-    	}
+        Util.checkCanReadPath(dataPath);
+
+        synchronized (CsvConnector.SYNCH_FILE_LOCK) {
+            if (!readOnly && !Files.isWritable(dataPath)) {
+                throw new ConfigurationException("Can't write to data path '" + dataPath.toString() + "'");
+            }
+        }
     }
 
     private void validateAttributeNames() {

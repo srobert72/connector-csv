@@ -20,6 +20,7 @@ import java.io.*;
 import java.nio.channels.Channels;
 import java.nio.channels.FileLock;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.*;
 
@@ -48,13 +49,13 @@ public class ObjectClassHandler implements CreateOp, DeleteOp, TestOp, SearchOp<
 	public ObjectClassHandler(ObjectClassHandlerConfiguration configuration) {
 		this.configuration = configuration;
 
-		header = initHeader(configuration.getFilePath());
+		header = initHeader(configuration.getDataPath());
 	}
 
-	private Map<String, Column> initHeader(File csvFile) {
+	private Map<String, Column> initHeader(Path dataPath) {
 		synchronized (CsvConnector.SYNCH_FILE_LOCK) {
 			CSVFormat csv = Util.createCsvFormat(configuration);
-			try (Reader reader = Util.createReader(csvFile, configuration)) {
+			try (Reader reader = Util.createReader(dataPath, configuration)) {
 				CSVParser parser = csv.parse(reader);
 				Iterator<CSVRecord> iterator = parser.iterator();
 
@@ -320,12 +321,11 @@ public class ObjectClassHandler implements CreateOp, DeleteOp, TestOp, SearchOp<
 
 	private void moveTmpToOrig() throws IOException {
 		// moving existing file
-		String path = configuration.getFilePath().getPath();
-		File orig = new File(path);
+		Path origPath = configuration.getDataPath();
 
 		File tmp = Util.createTmpPath(configuration);
 
-		Files.move(tmp.toPath(), orig.toPath(), StandardCopyOption.REPLACE_EXISTING);
+		Files.move(tmp.toPath(), origPath, StandardCopyOption.REPLACE_EXISTING);
 	}
 
 	private boolean isPassword(String column) {
@@ -603,8 +603,8 @@ public class ObjectClassHandler implements CreateOp, DeleteOp, TestOp, SearchOp<
 		LOG.ok("Comparing files. Old {0} (exists: {1}, size: {2}) with new {3} (exists: {4}, size: {5})",
 				oldCsv.getName(), oldCsv.exists(), oldCsv.length(), newCsv.getName(), newCsv.exists(), newCsv.length());
 
-		try (Reader reader = Util.createReader(newCsv, configuration)) {
-			Map<String, CSVRecord> oldData = loadOldSyncFile(oldCsv);
+		try (Reader reader = Util.createReader(newCsv.toPath(), configuration)) {
+			Map<String, CSVRecord> oldData = loadOldSyncFile(oldCsv.toPath());
 
 			Set<String> oldUsedOids = new HashSet<>();
 
@@ -654,7 +654,7 @@ public class ObjectClassHandler implements CreateOp, DeleteOp, TestOp, SearchOp<
 		}
 	}
 
-	private Map<String, CSVRecord> loadOldSyncFile(File oldCsv) {
+	private Map<String, CSVRecord> loadOldSyncFile(Path oldCsv) {
 		Map<String, Column> header = initHeader(oldCsv);
 		if (!this.header.equals(header)) {
 			throw new ConnectorException("Headers of sync file '" + oldCsv + "' and current csv don't match");
@@ -677,12 +677,12 @@ public class ObjectClassHandler implements CreateOp, DeleteOp, TestOp, SearchOp<
 				String uid = record.get(uidIndex);
 				if (StringUtil.isEmpty(uid)) {
 					throw new ConnectorException("Unique attribute not defined for record number "
-							+ record.getRecordNumber() + " in " + oldCsv.getName());
+							+ record.getRecordNumber() + " in " + oldCsv.getFileName());
 				}
 
 				if (oldData.containsKey(uid)) {
 					throw new ConnectorException("Unique attribute value '" + uid + "' is not unique in "
-							+ oldCsv.getName());
+							+ oldCsv.getFileName());
 				}
 
 				oldData.put(uid, record);
@@ -797,12 +797,12 @@ public class ObjectClassHandler implements CreateOp, DeleteOp, TestOp, SearchOp<
 
 		String token = null;
 		try {
-			File real = configuration.getFilePath();
+			Path realPath = configuration.getDataPath();
 
 			File last = Util.createSyncFileName(timestamp, configuration);
 
 			LOG.info("Creating new sync file {0} file {1}", timestamp, last.getName());
-			Files.copy(real.toPath(), last.toPath(), StandardCopyOption.REPLACE_EXISTING);
+			Files.copy(realPath, last.toPath(), StandardCopyOption.REPLACE_EXISTING);
 			LOG.ok("New sync file created, name {0}, size {1}", last.getName(), last.length());
 
 			token = Long.toString(timestamp);
@@ -826,7 +826,7 @@ public class ObjectClassHandler implements CreateOp, DeleteOp, TestOp, SearchOp<
 	public void test() {
 		configuration.validate();
 
-		initHeader(configuration.getFilePath());
+		initHeader(configuration.getDataPath());
 	}
 
 	@Override

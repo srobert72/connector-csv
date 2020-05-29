@@ -8,6 +8,7 @@ import org.identityconnectors.framework.spi.AbstractConfiguration;
 import org.identityconnectors.framework.spi.ConfigurationProperty;
 
 import java.io.*;
+import java.net.URI;
 import java.nio.charset.Charset;
 import java.util.*;
 
@@ -48,6 +49,13 @@ public class CsvConfiguration extends AbstractConfiguration {
             helpMessageKey = "UI_CSV_FILE_PATH_HELP", required = true)
     public File getFilePath() {
         return config.getFilePath();
+    }
+
+    @ConfigurationProperty(
+            displayMessageKey = "UI_CSV_URI",
+            helpMessageKey = "UI_CSV_URI_HELP", required = true)
+    public URI getDataUri() {
+        return config.getDataUri();
     }
 
     @ConfigurationProperty(
@@ -233,6 +241,10 @@ public class CsvConfiguration extends AbstractConfiguration {
         config.setFilePath(filePath);
     }
 
+    public void setDataUri(URI dataUri) {
+        config.setDataUri(dataUri);
+    }
+
     public void setPasswordAttribute(String passwordAttribute) {
         config.setPasswordAttribute(passwordAttribute);
     }
@@ -302,7 +314,7 @@ public class CsvConfiguration extends AbstractConfiguration {
         LOG.info("Csv configuration validation started");
 
         if (objectClassDefinition != null) {
-            Util.checkCanReadFile(objectClassDefinition);
+            Util.checkCanReadPath(objectClassDefinition.toPath());
         }
 
         try {

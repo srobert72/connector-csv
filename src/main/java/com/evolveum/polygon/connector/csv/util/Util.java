@@ -18,8 +18,8 @@ import org.identityconnectors.framework.common.objects.Attribute;
 import java.io.*;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
-import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
+import java.nio.charset.Charset;
+import java.nio.file.*;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -61,12 +61,12 @@ public class Util {
     }
 
     public static File createSyncLockFile(ObjectClassHandlerConfiguration config) {
-        String fileName = config.getFilePath().getName() + "." + SYNC_LOCK_EXTENSION;
+        String fileName = config.getDataPath().getFileName().toString() + "." + SYNC_LOCK_EXTENSION;
         return new File(config.getTmpFolder(), fileName);
     }
 
     public static File createTmpPath(ObjectClassHandlerConfiguration config) {
-        String fileName = config.getFilePath().getName() + config.hashCode() + "." + TMP_EXTENSION;
+        String fileName = config.getDataPath().getFileName().toString() + config.hashCode() + "." + TMP_EXTENSION;
         return new File(config.getTmpFolder(), fileName);
     }
 
@@ -160,30 +160,28 @@ public class Util {
     }
 
     public static BufferedReader createReader(ObjectClassHandlerConfiguration configuration) throws IOException {
-        return createReader(configuration.getFilePath(), configuration);
+        return createReader(configuration.getDataPath(), configuration);
     }
 
-    public static BufferedReader createReader(File path, ObjectClassHandlerConfiguration configuration) throws IOException {
-        FileInputStream fis = new FileInputStream(path);
-        InputStreamReader in = new InputStreamReader(fis, configuration.getEncoding());
-        return new BufferedReader(in);
+    public static BufferedReader createReader(Path dataPath, ObjectClassHandlerConfiguration configuration) throws IOException {
+        return Files.newBufferedReader(dataPath, Charset.forName(configuration.getEncoding()));
     }
 
-    public static void checkCanReadFile(File file) {
-        if (file == null) {
-            throw new ConfigurationException("File path is not defined");
+    public static void checkCanReadPath(Path dataPath) {
+        if (dataPath == null) {
+            throw new ConfigurationException("Data path is not defined");
         }
-        
+
         synchronized (CsvConnector.SYNCH_FILE_LOCK) {
-        	if (!file.exists()) {
-        		throw new ConfigurationException("File '" + file + "' doesn't exists. At least file with CSV header must exist");
-        	}
-        	if (file.isDirectory()) {
-        		throw new ConfigurationException("File path '" + file + "' is a directory, must be a CSV file");
-        	}
-        	if (!file.canRead()) {
-        		throw new ConfigurationException("File '" + file + "' can't be read");
-        	}
+            if (!Files.exists(dataPath)) {
+                throw new ConfigurationException("Data path '" + dataPath.toAbsolutePath() + "' doesn't exists. At least file with CSV header must exist");
+            }
+            if (Files.isDirectory(dataPath)) {
+                throw new ConfigurationException("Data path '" + dataPath.toAbsolutePath() + "' is a directory, must be a CSV file");
+            }
+            if (!Files.isReadable(dataPath)) {
+                throw new ConfigurationException("Data path '" + dataPath.toAbsolutePath() + "' can't be read");
+            }
         }
     }
 
@@ -210,13 +208,11 @@ public class Util {
     }
 
     public static BufferedReader createReader(CsvConfiguration configuration) throws IOException {
-        return createReader(configuration.getFilePath(), configuration);
+        return createReader(Paths.get(configuration.getDataUri()), configuration);
     }
 
-    public static BufferedReader createReader(File path, CsvConfiguration configuration) throws IOException {
-        FileInputStream fis = new FileInputStream(path);
-        InputStreamReader in = new InputStreamReader(fis, configuration.getEncoding());
-        return new BufferedReader(in);
+    public static BufferedReader createReader(Path dataPath, CsvConfiguration configuration) throws IOException {
+        return Files.newBufferedReader(dataPath, Charset.forName(configuration.getEncoding()));
     }
 
     public static Character toCharacter(String value) {
@@ -404,17 +400,15 @@ public class Util {
     }
 
     public static String[] listTokenFiles(ObjectClassHandlerConfiguration config) {
-        File csv = config.getFilePath();
+        String csvFileName = config.getDataPath().getFileName().toString();
 
         File tmpFolder = config.getTmpFolder();
 
-        String csvFileName = csv.getName();
         return tmpFolder.list(new SyncTokenFileFilter(csvFileName));
     }
 
     public static File createSyncFileName(long timestamp, ObjectClassHandlerConfiguration config) {
-        File csv = config.getFilePath();
-        String fileName = csv.getName();
+        String fileName = config.getDataPath().getFileName().toString();
 
         File tmpFolder = config.getTmpFolder();
 
